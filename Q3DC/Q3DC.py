@@ -5,23 +5,9 @@ import json
 import time
 import math
 
+import networkx as nx
 import numpy as np
-
-# needed for kd-trees
-try:
-    import scipy.spatial
-except ModuleNotFoundError as e:
-    # This requires a network connection!
-    slicer.util.pip_install('scipy')
-    import scipy.spatial
-
-# needed for topological sort. Yes, this is basically just DFS.
-try:
-    import networkx as nx
-except ModuleNotFoundError as e:
-    # This requires a network connection!
-    slicer.util.pip_install('networkx')
-    import networkx as nx
+import scipy.spatial
 
 
 #
