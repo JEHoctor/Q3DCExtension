@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.9)
+cmake_minimum_required(VERSION 3.13.4)
 
 project(Q3DC)
 
@@ -25,3 +25,15 @@ add_subdirectory(Q3DC)
 #-----------------------------------------------------------------------------
 include(${Slicer_EXTENSION_GENERATE_CONFIG})
 include(${Slicer_EXTENSION_CPACK})
+
+#-----------------------------------------------------------------------------
+include("${CMAKE_CURRENT_SOURCE_DIR}/SuperBuild.cmake")
+
+#-----------------------------------------------------------------------------
+# Install extension python packages
+install(CODE "message(\"CPack: - Install directory: ${python_packages_DIR}\")")
+install(
+    DIRECTORY "${python_packages_DIR}/"
+    DESTINATION ${Slicer_INSTALL_ROOT}${Slicer_BUNDLE_EXTENSIONS_LOCATION}
+    COMPONENT RuntimeLibraries
+    )
