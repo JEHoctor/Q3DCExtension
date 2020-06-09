@@ -344,6 +344,7 @@ class Q3DCWidget(ScriptedLoadableModuleWidget):
             if self.anatomical_legend is None:
                 self.anatomical_legend = slicer.vtkMRMLTableNode()
                 self.anatomical_legend.SetSaveWithScene(False)
+                self.anatomical_legend.SetLocked(True)
                 slicer.mrmlScene.AddNode(self.anatomical_legend)
                 self.anatomical_legend.SetAttribute('Q3DC.is_anatomical_legend', 'True')
 
