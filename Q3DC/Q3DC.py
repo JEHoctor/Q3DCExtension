@@ -397,6 +397,7 @@ class Q3DCWidget(ScriptedLoadableModuleWidget):
             # code would run correctly if we continued but wouldn't do anything
             return
         fid_index = fidList.GetNthControlPointIndexByID(selectedFidReflID)
+        old_name = fidList.GetNthControlPointLabel(fid_index)
 
         # Look in the legend for the info from the selected row.
         selected_indices = self.anatomical_legend_view.selectedIndexes()
@@ -415,6 +416,17 @@ class Q3DCWidget(ScriptedLoadableModuleWidget):
         # Set the name and description of the selected point.
         fidList.SetNthControlPointLabel(fid_index, name)
         fidList.SetNthControlPointDescription(fid_index, description)
+
+        # Update the landmark combo boxes to reflect the name change.
+        self.logic.updateLandmarkComboBox(fidList, self.ui.landmarkComboBox, False)
+        self.ui.landmarkComboBox.setCurrentText(name)
+        for box in (self.ui.landmarkComboBox1, self.ui.landmarkComboBox2):
+            new_selection = box.currentText
+            if new_selection == old_name:
+                new_selection = name
+            self.logic.updateLandmarkComboBox(fidList, box)
+            box.setCurrentText(new_selection)
+        self.UpdateInterface()
 
     def onModelChanged(self):
         print("-------Model Changed--------")
