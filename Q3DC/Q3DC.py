@@ -413,6 +413,11 @@ class Q3DCWidget(ScriptedLoadableModuleWidget):
             if name == fidList.GetNthControlPointLabel(i):
                 return
 
+        # Update the cached point names (landmark labels) in the JSON data.
+        landmarkDescription = self.logic.decodeJSON(fidList.GetAttribute('landmarkDescription'))
+        landmarkDescription[selectedFidReflID]["landmarkLabel"] = name
+        fidList.SetAttribute('landmarkDescription', self.logic.encodeJSON(landmarkDescription))
+
         # Set the name and description of the selected point.
         fidList.SetNthControlPointLabel(fid_index, name)
         fidList.SetNthControlPointDescription(fid_index, description)
@@ -1138,7 +1143,14 @@ class Q3DCLogic(ScriptedLoadableModuleLogic):
                     landmarkDescription[midPointID]["projection"]["closestPointIndex"] = \
                         self.projectOnSurface(hardenModel, fidList, midPointID)
                     fidList.SetAttribute("landmarkDescription",self.encodeJSON(landmarkDescription))
+                label1 = landmarkDescription[landmark1ID]['landmarkLabel']
+                label2 = landmarkDescription[landmark2ID]['landmarkLabel']
+                name = f'{label1}_{label2}'
+                fidList.SetNthControlPointLabel(index, name)
+                landmarkDescription[midPointID]['landmarkLabel'] = name
+                fidList.SetAttribute('landmarkDescription', self.encodeJSON(landmarkDescription))
                 self.updateMidPoint(fidList, midPointID)
+                landmarkDescription = self.decodeJSON(fidList.GetAttribute("landmarkDescription"))
 
     # Called when a landmarks is moved
     def onPointModifiedEvent(self, obj, event):
