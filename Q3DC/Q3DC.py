@@ -407,6 +407,11 @@ class Q3DCWidget(ScriptedLoadableModuleWidget):
         name = self.anatomical_legend.GetCellText(row_index, 0)
         description = self.anatomical_legend.GetCellText(row_index, 1)
 
+        # Refuse to create multiple fiducials with the same name.
+        for i in range(fidList.GetNumberOfControlPoints()):
+            if name == fidList.GetNthControlPointLabel(i):
+                return
+
         # Set the name and description of the selected point.
         fidList.SetNthControlPointLabel(fid_index, name)
         fidList.SetNthControlPointDescription(fid_index, description)
