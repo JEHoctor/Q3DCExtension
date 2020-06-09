@@ -390,7 +390,7 @@ class Q3DCWidget(ScriptedLoadableModuleWidget):
             return
         selectedFidReflID = self.logic.findIDFromLabel(
             fidList,
-            self.landmarkComboBox.currentText
+            self.ui.landmarkComboBox.currentText
         )
         if selectedFidReflID is None:
             # code would run correctly if we continued but wouldn't do anything
