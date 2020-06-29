@@ -415,6 +415,21 @@ class Q3DCWidget(ScriptedLoadableModuleWidget):
         fidList.SetNthControlPointLabel(fid_index, name)
         fidList.SetNthControlPointDescription(fid_index, description)
 
+        # Update the midpoint names and the JSON structure
+        D, landmarkDescription = self.logic.form_midpoint_provenance_digraph(
+            fidList, return_json_struct=True)
+        landmarkDescription[selectedFidReflID]['landmarkLabel'] = name
+        for markupID in reversed(list(nx.dfs_postorder_nodes(D, selectedFidReflID))[:-1]):
+            parent_id_1 = landmarkDescription[markupID]['midPoint']['Point1']
+            parent_id_2 = landmarkDescription[markupID]['midPoint']['Point2']
+            parent_name_1 = landmarkDescription[parent_id_1]['landmarkLabel']
+            parent_name_2 = landmarkDescription[parent_id_2]['landmarkLabel']
+            m_name = self.logic.name_midpoint(parent_name_1, parent_name_2)
+            landmarkDescription['landmarkLabel'] = m_name
+            m_index = fidList.GetNthControlPointIndexByID(markupID)
+            fidList.SetNthControlPointLabel(m_index, m_name)
+        fidList.SetAttribute('landmarkDescription', self.logic.encodeJSON(landmarkDescription))
+
         # Update the landmark combo boxes to reflect the name change.
         self.logic.updateLandmarkComboBox(fidList, self.ui.landmarkComboBox, False)
         self.ui.landmarkComboBox.setCurrentText(name)
@@ -496,7 +511,8 @@ class Q3DCWidget(ScriptedLoadableModuleWidget):
         landmark1ID = self.logic.findIDFromLabel(fidList, label1)
         landmark2ID = self.logic.findIDFromLabel(fidList, label2)
         coord = self.logic.calculateMidPointCoord(fidList, landmark1ID, landmark2ID)
-        fidList.AddFiducial(coord[0],coord[1],coord[2], f'{label1}_{label2}')
+        new_midpoint_name = self.logic.name_midpoint(label1, label2)
+        fidList.AddFiducial(coord[0],coord[1],coord[2], new_midpoint_name)
         fidList.SetNthFiducialSelected(fidList.GetNumberOfMarkups() - 1, False)
         # update of the data structure
         landmarkDescription = self.logic.decodeJSON(fidList.GetAttribute("landmarkDescription"))
@@ -973,11 +989,17 @@ class Q3DCLogic(ScriptedLoadableModuleLogic):
             isMidPoint = landmarkDescription[markupID]['midPoint']['isMidPoint']
             landmarks.SetNthFiducialSelected(n, not isMidPoint)
 
-    def changementOfConnectedModel(self, landmarks, model, onSurface):
-        landmarks.SetAttribute("connectedModelID", model.GetID())
-        landmarks.SetAttribute("hardenModelID", model.GetAttribute("hardenModelID"))
-        landmarkDescription = self.decodeJSON(landmarks.GetAttribute("landmarkDescription"))
+    @staticmethod
+    def name_midpoint(parent_name_1, parent_name_2):
+        if '_' in parent_name_1:
+            parent_name_1 = f'({parent_name_1})'
+        if '_' in parent_name_2:
+            parent_name_2 = f'({parent_name_2})'
+        return f'{parent_name_1}_{parent_name_2}'
 
+    @staticmethod
+    def form_midpoint_provenance_digraph(landmarks, return_json_struct=False):
+        landmarkDescription = Q3DCLogic.decodeJSON(landmarks.GetAttribute("landmarkDescription"))
         D = nx.DiGraph()
         for n in range(landmarks.GetNumberOfMarkups()):
             markupID = landmarks.GetNthMarkupID(n)
@@ -985,7 +1007,17 @@ class Q3DCLogic(ScriptedLoadableModuleLogic):
             dbtm = landmarkDescription[markupID]['midPoint']['definedByThisMarkup']
             for dependent_point in dbtm:
                 D.add_edge(markupID, dependent_point)
+        if return_json_struct:
+            return D, landmarkDescription
+        else:
+            return D
 
+    def changementOfConnectedModel(self, landmarks, model, onSurface):
+        landmarks.SetAttribute("connectedModelID", model.GetID())
+        landmarks.SetAttribute("hardenModelID", model.GetAttribute("hardenModelID"))
+
+        D, landmarkDescription = self.form_midpoint_provenance_digraph(
+            landmarks, return_json_struct=True)
         for markupID in nx.topological_sort(D):
             if onSurface:
                 if landmarkDescription[markupID]["projection"]["isProjected"] == True:
@@ -1896,9 +1928,12 @@ class Q3DCLogic(ScriptedLoadableModuleLogic):
             displayNode.SetScalarVisibility(True)
 
     def findROI(self, fidList):
+        print('----------findROI--------')
+        print('fidList', fidList)
         hardenModel = slicer.app.mrmlScene().GetNodeByID(fidList.GetAttribute("hardenModelID"))
         connectedModel = slicer.app.mrmlScene().GetNodeByID(fidList.GetAttribute("connectedModelID"))
         landmarkDescription = self.decodeJSON(fidList.GetAttribute("landmarkDescription"))
+        print('landmarkDescription', landmarkDescription)
         arrayName = fidList.GetAttribute("arrayName")
         ROIPointListID = vtk.vtkIdList()
         for key,activeLandmarkState in landmarkDescription.items():
@@ -1923,12 +1958,14 @@ class Q3DCLogic(ScriptedLoadableModuleLogic):
         messageBox.setStandardButtons(messageBox.Ok)
         messageBox.exec_()
 
-    def encodeJSON(self, input):
+    @staticmethod
+    def encodeJSON(input):
         encodedString = json.dumps(input)
         encodedString = encodedString.replace('\"', '\'')
         return encodedString
 
-    def decodeJSON(self, input):
+    @staticmethod
+    def decodeJSON(input):
         if input:
             input = input.replace('\'','\"')
             return json.loads(input)
